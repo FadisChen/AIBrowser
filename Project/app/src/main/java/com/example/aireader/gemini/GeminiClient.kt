@@ -35,14 +35,14 @@ class GeminiClient(private val preferenceManager: PreferenceManager) {
             // 在 0.9.0 版本中 GenerationConfig 的建構方式改變了
             val generationConfig = GenerationConfig.builder()
                 .build()
-            
+
             val model = GenerativeModel(
                 modelName = modelName,
                 apiKey = apiKey,
                 generationConfig = generationConfig
             )
             
-            val prompt = "請以繁體中文簡潔摘要以下內容（300字以內）：\n\n$content"
+            val prompt = "請以繁體中文簡潔300字以內摘要以下內容：\n\n$content"
             val response = model.generateContent(prompt)
             
             return@withContext Result.success(response.text ?: "無法生成摘要")

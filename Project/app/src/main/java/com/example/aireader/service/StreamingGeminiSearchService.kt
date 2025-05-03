@@ -52,7 +52,7 @@ class StreamingGeminiSearchService(
                     "contents": [
                         {
                             "parts": [
-                                {"text": "$query"}
+                                {"text": "$query \n\n請以繁體中文回答。"}
                             ]
                         }
                     ],

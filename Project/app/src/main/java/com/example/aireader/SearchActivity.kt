@@ -111,6 +111,14 @@ class SearchActivity : AppCompatActivity() {
         }
     }
     
+    override fun onResume() {
+        super.onResume()
+        
+        // 重置搜索結果顯示狀態
+        searchResultsShowing = false
+        searchResultDialog = null
+    }
+    
     private fun setupSearchInputListeners() {
         // 處理Enter鍵事件
         searchEditText.setOnEditorActionListener { _, actionId, event ->
@@ -172,6 +180,11 @@ class SearchActivity : AppCompatActivity() {
             return
         }
         
+        // 確保重置搜索結果狀態
+        searchResultsShowing = false
+        searchResultDialog?.dismiss()
+        searchResultDialog = null
+        
         val loadingDialog = LoadingDialog(this, "正在搜索...")
         loadingDialog.show()
         
@@ -197,12 +210,14 @@ class SearchActivity : AppCompatActivity() {
                     }
                     .catch { e ->
                         loadingDialog.dismiss()
+                        searchResultsShowing = false
                         Log.e(TAG, "搜索時發生錯誤", e)
                         Toast.makeText(this@SearchActivity, "搜索失敗: ${e.message}", Toast.LENGTH_LONG).show()
                     }
                     .collect()
             } catch (e: Exception) {
                 loadingDialog.dismiss()
+                searchResultsShowing = false
                 Log.e(TAG, "執行搜索時出錯", e)
                 Toast.makeText(this@SearchActivity, "搜索失敗: ${e.message}", Toast.LENGTH_LONG).show()
             }
