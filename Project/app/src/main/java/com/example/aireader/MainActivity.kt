@@ -69,6 +69,32 @@ class MainActivity : AppCompatActivity() {
     }
     
     /**
+     * 處理返回按鍵邏輯
+     */
+    override fun onBackPressed() {
+        // 如果可以返回網頁歷史
+        if (webView.canGoBack()) {
+            webView.goBack()
+        } else {
+            // 檢查是否是從搜尋結果點擊進入
+            val fromSearchResult = intent.getBooleanExtra("from_search_result", false)
+            
+            // 如果是從搜尋結果點擊進入，則正常結束這個 Activity，返回到上一個 Activity
+            // 這樣 SearchActivity 的 onResume 會被呼叫，並恢復對話框
+            if (fromSearchResult) {
+                finish()
+            } else {
+                // 如果不是從搜尋結果點擊進入，則顯示搜尋畫面
+                val intent = Intent(this, SearchActivity::class.java)
+                // 清除所有之前的 Activity
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                finish()
+            }
+        }
+    }
+    
+    /**
      * 處理傳入的Intent，根據內容類型顯示相應內容
      */
     private fun handleIntent(intent: Intent) {
@@ -307,4 +333,4 @@ class MainActivity : AppCompatActivity() {
         const val EXTRA_DOCUMENT_TYPE = "document_type"
         const val EXTRA_WEB_URL = "web_url"
     }
-} 
+}

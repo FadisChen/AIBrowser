@@ -28,15 +28,35 @@ class ReferenceAdapter(
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_reference, parent, false)
         return ReferenceViewHolder(view)
-    }
-
-    override fun onBindViewHolder(holder: ReferenceViewHolder, position: Int) {
+    }    override fun onBindViewHolder(holder: ReferenceViewHolder, position: Int) {
         val reference = references[position]
-        holder.title.text = reference.title.ifEmpty { "參考連結 ${position + 1}" }
-        holder.url.text = reference.url
+        // 設定標題，如果沒有標題則顯示網域名稱或預設文字
+        val displayTitle = when {
+            reference.title.isNotEmpty() -> reference.title
+            reference.url.isNotEmpty() -> extractDomainFromUrl(reference.url)
+            else -> "參考連結 ${position + 1}"
+        }
         
+        holder.title.text = displayTitle
+        // 將URL設為隱藏
+        holder.url.visibility = View.GONE
+        
+        // 點擊整個項目時觸發連結
         holder.itemView.setOnClickListener {
             onItemClickListener(reference.url)
+        }
+    }
+    
+    /**
+     * 從URL中提取網域名稱
+     */
+    private fun extractDomainFromUrl(url: String): String {
+        return try {
+            val urlPattern = "https?://([^/]+).*".toRegex()
+            val result = urlPattern.find(url)
+            result?.groupValues?.get(1) ?: url
+        } catch (e: Exception) {
+            url
         }
     }
 

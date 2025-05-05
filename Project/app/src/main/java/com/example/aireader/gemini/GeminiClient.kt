@@ -42,7 +42,15 @@ class GeminiClient(private val preferenceManager: PreferenceManager) {
                 generationConfig = generationConfig
             )
             
-            val prompt = "請以繁體中文簡潔300字以內摘要以下內容：\n\n$content"
+            val prompt = """Please read the following text and provide a concise summary.
+
+                    Here are the requirements for the summary:
+                    1.  The summary must be concise.
+                    2.  The summary must be no more than 300 words.
+                    3.  The summary must be provided in Traditional Chinese.
+        
+                    [Text to Summarize]:
+                    $content"""
             val response = model.generateContent(prompt)
             
             return@withContext Result.success(response.text ?: "無法生成摘要")
@@ -86,7 +94,17 @@ class GeminiClient(private val preferenceManager: PreferenceManager) {
             )
             
             // 構建系統提示
-            val systemPrompt = "你是知識問答助手。請根據以下文章以繁體中文進行回答，如果問題與文章無關則回覆不知道。\n\n$content"
+            val systemPrompt = """You are a Knowledge Assistant designed to answer questions based on the text provided.
+
+            Here are the rules you must follow:
+            1.  **Prioritize the Text:** Always attempt to answer questions *solely* using the information found within the text provided below.
+            2.  **Handle Unrelated Questions with General Knowledge:** If a question *cannot* be answered using *only* the provided text, but you *do* possess relevant general knowledge about the topic:
+                *   Explicitly state that the information is **not found within the provided text**.
+                *   Then, provide the answer based on your general knowledge.
+            3.  **Handle Unanswerable Questions:** If a question *cannot* be answered from the provided text *and* you also *do not* have relevant general knowledge on the topic, simply state that you cannot answer the question.
+            4.  **Always answer in Traditional Chinese.
+            [Provided Text]:
+            $content"""
             
             // 創建聊天會話
             val chat = model.startChat(
@@ -97,7 +115,7 @@ class GeminiClient(private val preferenceManager: PreferenceManager) {
                     },
                     content {
                         role = "model"
-                        text("我已了解，我將基於文章內容以繁體中文回答問題，如果問題與文章無關，會回覆不知道。")
+                        text("我已了解，我將基於文章內容以繁體中文回答問題。")
                     }
                 )
             )

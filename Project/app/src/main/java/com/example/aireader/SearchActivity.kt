@@ -52,6 +52,12 @@ class SearchActivity : AppCompatActivity() {
     private var searchResultsShowing = false
     private val TAG = "SearchActivity"
     
+    // 追蹤上次搜索結果資訊
+    private var lastQuery: String = ""
+    private var lastContent: String = ""
+    private var lastReferences: List<Reference> = emptyList()
+    private var shouldRestoreDialog = false
+
     // 語音辨識結果處理
     private val speechRecognitionLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -114,9 +120,15 @@ class SearchActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         
-        // 重置搜索結果顯示狀態
-        searchResultsShowing = false
-        searchResultDialog = null
+        // 如果應該恢復對話框，且有上次的搜尋結果
+        if (shouldRestoreDialog && lastQuery.isNotEmpty() && lastContent.isNotEmpty()) {
+            showSearchResultDialog(lastContent, lastReferences, lastQuery)
+            shouldRestoreDialog = false
+        } else {
+            // 如果不需要恢復對話框，則重置搜索結果顯示狀態
+            searchResultsShowing = false
+            searchResultDialog = null
+        }
     }
     
     private fun setupSearchInputListeners() {
@@ -227,15 +239,25 @@ class SearchActivity : AppCompatActivity() {
     private var searchResultDialog: SearchResultDialog? = null
     
     private fun showSearchResultDialog(content: String, references: List<Reference>, query: String) {
+        // 保存搜尋結果的資料
+        lastQuery = query
+        lastContent = content
+        lastReferences = references
+        
         searchResultDialog = SearchResultDialog(
             context = this,
             content = content,
             references = references,
             query = query,
             onWebsiteClick = { url ->
+                // 設定標記表示需要在返回時恢復對話框
+                shouldRestoreDialog = true
+                
                 // 打開特定網頁
                 val intent = Intent(this, MainActivity::class.java).apply {
                     putExtra("url", url)
+                    // 添加標記以便 MainActivity 知道是從搜尋結果點擊進入的
+                    putExtra("from_search_result", true)
                 }
                 startActivity(intent)
             }
@@ -244,6 +266,10 @@ class SearchActivity : AppCompatActivity() {
     }
     
     private fun updateSearchResultDialog(content: String, references: List<Reference>) {
+        // 更新保存的內容
+        lastContent = content
+        lastReferences = references
+        
         searchResultDialog?.updateContent(content, references)
     }
     
@@ -333,4 +359,4 @@ class SearchResultDialog(
             referenceAdapter.updateReferences(newReferences)
         }
     }
-} 
+}
