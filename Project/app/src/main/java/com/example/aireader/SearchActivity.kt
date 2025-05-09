@@ -201,7 +201,12 @@ class SearchActivity : AppCompatActivity() {
             onDeleteClick = { historyItem ->
                 // 刪除歷史項目
                 SearchHistoryItem.deleteSearchHistoryItem(this, historyItem.id)
+                
                 // 重新載入歷史列表
+                val history = SearchHistoryItem.getAllSearchHistory(this)
+                historyItems.clear()
+                historyItems.addAll(history)
+                searchHistoryAdapter.notifyDataSetChanged()
                 loadSearchHistory()
             }
         )
