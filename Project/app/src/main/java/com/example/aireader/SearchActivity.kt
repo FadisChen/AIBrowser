@@ -27,8 +27,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.aireader.adapter.ReferenceAdapter
+import com.example.aireader.adapter.SearchHistoryAdapter
 import com.example.aireader.databinding.ActivitySearchBinding
 import com.example.aireader.model.Reference
+import com.example.aireader.model.SearchHistoryItem
 import com.example.aireader.service.StreamingGeminiSearchService
 import com.example.aireader.utils.PreferenceManager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -57,6 +59,10 @@ class SearchActivity : AppCompatActivity() {
     private var lastContent: String = ""
     private var lastReferences: List<Reference> = emptyList()
     private var shouldRestoreDialog = false
+    
+    // 搜尋歷史相關
+    private lateinit var searchHistoryAdapter: SearchHistoryAdapter
+    private var historyItems: MutableList<SearchHistoryItem> = mutableListOf()
 
     // 語音辨識結果處理
     private val speechRecognitionLauncher = registerForActivityResult(
@@ -115,6 +121,12 @@ class SearchActivity : AppCompatActivity() {
         settingsButton.setOnClickListener {
             showSettingsDialog()
         }
+        
+        // 初始化搜尋歷史列表
+        setupSearchHistoryRecyclerView()
+        
+        // 載入搜尋歷史
+        loadSearchHistory()
     }
     
     override fun onResume() {
@@ -153,10 +165,85 @@ class SearchActivity : AppCompatActivity() {
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 val isUrlPattern = s.toString().trim().startsWith("http://") || s.toString().trim().startsWith("https://")
                 searchButton.setImageResource(if (isUrlPattern) R.drawable.ic_globe else R.drawable.ic_search)
+                
+                // 當有文字輸入時隱藏歷史記錄
+                val text = s?.toString() ?: ""
+                if (text.isNotEmpty()) {
+                    updateSearchHistoryVisibility(false)
+                } else if (searchEditText.hasFocus()) {
+                    // 當文字為空且輸入框有焦點時顯示歷史記錄
+                    updateSearchHistoryVisibility(true)
+                }
             }
             
             override fun afterTextChanged(s: Editable?) {}
         })
+        
+        // 當搜尋框獲得焦點且為空時顯示歷史記錄
+        searchEditText.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) {
+                updateSearchHistoryVisibility(searchEditText.text.isEmpty())
+            } else {
+                updateSearchHistoryVisibility(false)
+            }
+        }
+    }
+    
+    private fun setupSearchHistoryRecyclerView() {
+        // 初始化搜尋歷史適配器
+        searchHistoryAdapter = SearchHistoryAdapter(
+            this,
+            historyItems,
+            onItemClick = { historyItem ->
+                // 點擊歷史項目時顯示相應結果
+                showSearchResultFromHistory(historyItem)
+            },
+            onDeleteClick = { historyItem ->
+                // 刪除歷史項目
+                SearchHistoryItem.deleteSearchHistoryItem(this, historyItem.id)
+                // 重新載入歷史列表
+                loadSearchHistory()
+            }
+        )
+        
+        // 設置RecyclerView
+        binding.searchHistoryRecyclerView.apply {
+            layoutManager = LinearLayoutManager(this@SearchActivity)
+            adapter = searchHistoryAdapter
+        }
+    }
+    
+    private fun loadSearchHistory() {
+        // 從SharedPreferences加載搜尋歷史
+        val history = SearchHistoryItem.getAllSearchHistory(this)
+        historyItems.clear()
+        historyItems.addAll(history)
+        searchHistoryAdapter.notifyDataSetChanged()
+        
+        // 根據當前輸入框狀態決定是否顯示歷史記錄
+        val shouldShowHistory = searchEditText.hasFocus() && searchEditText.text.isEmpty()
+        updateSearchHistoryVisibility(shouldShowHistory)
+    }
+    
+    private fun updateSearchHistoryVisibility(show: Boolean) {
+        // 只有當有歷史記錄時才顯示
+        binding.historyCardView.visibility = if (show && historyItems.isNotEmpty()) View.VISIBLE else View.GONE
+    }
+    
+    private fun showSearchResultFromHistory(historyItem: SearchHistoryItem) {
+        // 保存當前結果信息
+        lastQuery = historyItem.query
+        lastContent = historyItem.content
+        lastReferences = historyItem.references
+        
+        // 將查詢文字填入搜尋框
+        searchEditText.setText(historyItem.query)
+        
+        // 顯示結果對話框
+        showSearchResultDialog(historyItem.content, historyItem.references, historyItem.query)
+        
+        // 隱藏歷史記錄卡片
+        updateSearchHistoryVisibility(false)
     }
     
     private fun startSpeechRecognition() {
@@ -249,114 +336,59 @@ class SearchActivity : AppCompatActivity() {
             content = content,
             references = references,
             query = query,
-            onWebsiteClick = { url ->
-                // 設定標記表示需要在返回時恢復對話框
-                shouldRestoreDialog = true
-                
-                // 打開特定網頁
+            onDismiss = { 
+                searchResultsShowing = false 
+                searchResultDialog = null
+            },
+            onBrowseReference = { url ->
                 val intent = Intent(this, MainActivity::class.java).apply {
                     putExtra("url", url)
-                    // 添加標記以便 MainActivity 知道是從搜尋結果點擊進入的
                     putExtra("from_search_result", true)
                 }
                 startActivity(intent)
+                shouldRestoreDialog = true
             }
         )
+        
         searchResultDialog?.show()
+        
+        // 將搜尋結果儲存到歷史記錄中
+        val historyItem = SearchHistoryItem(
+            query = query,
+            content = content,
+            references = references
+        )
+        
+        // 保存到SearchHistoryItem中
+        SearchHistoryItem.saveSearchHistoryItem(this, historyItem)
+        
+        // 重新載入搜尋歷史
+        loadSearchHistory()
     }
     
     private fun updateSearchResultDialog(content: String, references: List<Reference>) {
-        // 更新保存的內容
+        searchResultDialog?.updateContent(content, references)
+        
+        // 更新最後的搜尋結果資料
         lastContent = content
         lastReferences = references
         
-        searchResultDialog?.updateContent(content, references)
+        // 更新歷史記錄中的項目
+        val updatedHistoryItem = SearchHistoryItem(
+            query = lastQuery,
+            content = content,
+            references = references
+        )
+        
+        // 保存更新後的搜尋歷史
+        SearchHistoryItem.saveSearchHistoryItem(this, updatedHistoryItem)
+        
+        // 重新載入搜尋歷史
+        loadSearchHistory()
     }
     
     private fun showSettingsDialog() {
         val settingsDialog = SettingsDialog(this, preferenceManager)
         settingsDialog.show()
-    }
-}
-
-/**
- * 搜索結果對話框
- */
-class SearchResultDialog(
-    context: AppCompatActivity,
-    var content: String,
-    var references: List<Reference>,
-    private val query: String,
-    private val onWebsiteClick: (String) -> Unit
-) : Dialog(context) {
-    
-    private lateinit var contentTextView: TextView
-    private lateinit var referencesRecyclerView: RecyclerView
-    private lateinit var closeButton: ImageButton
-    private lateinit var queryTextView: TextView
-    private lateinit var referenceAdapter: ReferenceAdapter
-    
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        // 移除標題欄
-        requestWindowFeature(Window.FEATURE_NO_TITLE)
-        
-        // 設置對話框內容
-        setContentView(R.layout.dialog_search_result)
-        
-        // 設置對話框寬度為屏幕寬度的90%
-        window?.let {
-            val width = (context.resources.displayMetrics.widthPixels * 0.9).toInt()
-            it.setLayout(width, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
-        
-        // 初始化視圖
-        contentTextView = findViewById(R.id.contentTextView)
-        referencesRecyclerView = findViewById(R.id.referencesRecyclerView)
-        closeButton = findViewById(R.id.closeButton)
-        queryTextView = findViewById(R.id.queryTextView)
-        
-        // 設置關閉按鈕
-        closeButton.setOnClickListener {
-            dismiss()
-        }
-        
-        // 設置查詢文本
-        queryTextView.text = "「$query」的搜索結果"
-        
-        // 設置內容
-        contentTextView.text = content
-        
-        // 設置參考資料列表
-        setupReferencesList()
-    }
-    
-    private fun setupReferencesList() {
-        referenceAdapter = ReferenceAdapter(references) { url ->
-            dismiss()
-            onWebsiteClick(url)
-        }
-        
-        referencesRecyclerView.apply {
-            layoutManager = LinearLayoutManager(context)
-            adapter = referenceAdapter
-        }
-    }
-    
-    /**
-     * 更新對話框內容
-     */
-    fun updateContent(newContent: String, newReferences: List<Reference>) {
-        this.content = newContent
-        this.references = newReferences
-        
-        // 在UI線程更新內容
-        contentTextView.post {
-            contentTextView.text = newContent
-            
-            // 更新參考資料列表
-            referenceAdapter.updateReferences(newReferences)
-        }
     }
 }

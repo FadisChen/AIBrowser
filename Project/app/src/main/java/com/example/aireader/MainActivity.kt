@@ -191,10 +191,31 @@ class MainActivity : AppCompatActivity() {
             generateSummary()
         }
         
+        // 複製網址按鈕
+        binding.copyUrlFab.setOnClickListener {
+            closeFabMenu()
+            copyCurrentUrl()
+        }
+        
         // 問答按鈕
         binding.chatFab.setOnClickListener {
             closeFabMenu()
             showChatDialog()
+        }
+    }
+    
+    /**
+     * 複製當前網址
+     */
+    private fun copyCurrentUrl() {
+        val currentUrl = webView.url
+        if (currentUrl != null) {
+            val clipboard = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+            val clip = android.content.ClipData.newPlainText("網址", currentUrl)
+            clipboard.setPrimaryClip(clip)
+            Toast.makeText(this, "已複製網址", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "無法獲取當前網址", Toast.LENGTH_SHORT).show()
         }
     }
     
@@ -215,6 +236,7 @@ class MainActivity : AppCompatActivity() {
     private fun openFabMenu() {
         isFabMenuOpen = true
         binding.summaryFab.visibility = View.VISIBLE
+        binding.copyUrlFab.visibility = View.VISIBLE
         binding.chatFab.visibility = View.VISIBLE
         binding.mainFab.setImageResource(R.drawable.ic_close)
     }
@@ -225,6 +247,7 @@ class MainActivity : AppCompatActivity() {
     private fun closeFabMenu() {
         isFabMenuOpen = false
         binding.summaryFab.visibility = View.GONE
+        binding.copyUrlFab.visibility = View.GONE
         binding.chatFab.visibility = View.GONE
         binding.mainFab.setImageResource(R.drawable.ic_settings)
     }

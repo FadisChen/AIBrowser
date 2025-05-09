@@ -86,6 +86,21 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- 複製網址按鈕 -->
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/copyUrlFab"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="16dp"
+        android:contentDescription="複製網址"
+        android:src="@drawable/ic_copy"
+        android:visibility="gone"
+        android:alpha="0.5"
+        app:fabSize="mini"
+        app:layout_constraintBottom_toTopOf="@+id/summaryFab"
+        app:layout_constraintEnd_toEndOf="parent" />
+        
     <!-- 摘要按鈕 -->
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/summaryFab"

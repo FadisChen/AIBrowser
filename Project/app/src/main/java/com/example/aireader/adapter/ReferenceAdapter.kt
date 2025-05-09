@@ -67,7 +67,7 @@ class ReferenceAdapter(
      * @param newReferences 新的參考連結列表
      */
     fun updateReferences(newReferences: List<Reference>) {
-        this.references = newReferences
+        references = newReferences
         notifyDataSetChanged()
     }
 } 
