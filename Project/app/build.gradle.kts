@@ -104,6 +104,12 @@ dependencies {
     // Gson for JSON handling
     implementation("com.google.code.gson:gson:2.10.1")
     
+    // markwon
+    implementation("io.noties.markwon:core:4.6.2")
+    implementation("io.noties.markwon:html:4.6.2")
+    implementation("io.noties.markwon:image:4.6.2")
+    implementation("io.noties.markwon:ext-tables:4.6.2")
+
     // Retrofit for API calls (可選)
     // implementation("com.squareup.retrofit2:retrofit:2.9.0")
     // implementation("com.squareup.retrofit2:converter-gson:2.9.0")
