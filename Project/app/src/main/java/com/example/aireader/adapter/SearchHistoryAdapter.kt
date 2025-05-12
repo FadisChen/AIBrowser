@@ -82,7 +82,6 @@ class SearchHistoryAdapter(
                     val position = adapterPosition
                     if (position != RecyclerView.NO_POSITION) {
                         onDeleteClick(item)
-                        removeItem(position)
                     }
                 }
                 .setNegativeButton("取消", null)
